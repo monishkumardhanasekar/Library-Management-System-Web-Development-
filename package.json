@@ -1,20 +1,30 @@
 {
   "name": "prj1-sol",
   "version": "1.0.0",
-  "description": "",
+  "description": "Name:\t\tMonish Kumar Dhanasekar B-Number:\tB01025975 Email:\t\tmdhanasekar@binghamton.edu",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "clean": "shx rm -rf dist",
+    "build": "tsc",
+    "postbuild": "shx chmod a+x dist/index.js",
+    "watch": "tsc --watch",
+    "pretest": "npm run build",
+    "test": "mocha --reporter-options maxDiffSize=128000 dist/test",
+    "predebug-test": "npm run build",
+    "debug-test": "mocha --inspect-brk dist/test",
+    "predev": "clear && npm run build",
+    "dev": "./dist/index.js ~/cs544/data/books.json"
   },
+  "type": "module",
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "@types/chai": "^4.3.11",
     "@types/mocha": "^10.0.6",
-    "@types/node": "^20.11.19",
-    "chai": "^5.1.0",
-    "mocha": "^10.3.0",
+    "@types/node": "^20.11.16",
+    "chai": "^5.0.3",
+    "mocha": "^10.2.0",
     "shx": "^0.3.4",
     "typescript": "^5.3.3"
   },

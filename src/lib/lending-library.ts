@@ -136,18 +136,22 @@ export class LendingLibrary {
    *    BAD_REQ: no words in search
    */
   findBooks(req: FindBooksReq): Errors.Result<XBook[]> {
+    // Check for required properties in the request
     const requiredPropsError = checkRequiredProps<FindBooksReq>(
       req,
       RequiredType.FindBook
     );
     if (!requiredPropsError.isOk) return requiredPropsError;
 
+    // Check for correct types of properties in the request
     const propsTypeError = checkPropsType<FindBooksReq>(req, RequiredType.FindBook);
     if (!propsTypeError.isOk) return propsTypeError;
 
+    // Check for any bad request issues
     const badRequestError = checkBadReq<FindBooksReq>(req, RequiredType.FindBook);
     if (!badRequestError.isOk) return badRequestError;
 
+     // Extract words from the search query
     const words = extractWords(req.search);
     if (words.length === 0 || !words.some((val) => val.length > 1)) {
       return Errors.errResult(`Empty search Query`, {
@@ -165,6 +169,7 @@ export class LendingLibrary {
       matchingISBNs = intersectionSet<ISBN>(matchingISBNs, wordISBNs);
   }
   
+  // Retrieve books corresponding to the matching ISBNs
   const matchingBooks = [];
   for (const isbn of matchingISBNs) {
       matchingBooks.push(this.booksIndex[isbn]);
@@ -201,7 +206,9 @@ export class LendingLibrary {
     );
     if (!propsTypeError.isOk) return propsTypeError;
 
+    // Retrieve the book corresponding to the given ISBN
     const book = this.booksIndex[req.isbn];
+    // If the book does not exist Return error result indicating unknown book
     if (!book) {
       return Errors.errResult(`unknown book ${req.isbn}`, {
         widget: "isbn",
@@ -212,6 +219,7 @@ export class LendingLibrary {
     this.checkBooks[req.isbn] = this.checkBooks[req.isbn] || [];
     this.patronBooks[req.patronId] = this.patronBooks[req.patronId] || [];
 
+    // Define conditions for error cases
     const conditions = [
       {
           condition: this.checkBooks[req.isbn].length >= book.nCopies,
@@ -232,6 +240,7 @@ export class LendingLibrary {
       }
   }
 
+  // Record the book as checked out by the patron
   this.patronBooks[req.patronId].push(req.isbn);
   this.checkBooks[req.isbn].push(req.patronId);
 
@@ -278,6 +287,8 @@ export class LendingLibrary {
       }
     }
 
+
+    // If the book is not checked out by the patron Return error result indicating book not checked out by the patron
     if (!bookFound) {
       return Errors.errResult(
         `No checkout of book ${req.isbn} by patron ${req.patronId}`,
@@ -288,11 +299,14 @@ export class LendingLibrary {
       );
     }
 
+     // Find index of the book in the patron's checked-out books list
     const indexToBook = this.patronBooks[req.patronId].indexOf(req.isbn);
+    // Find index of the patron in the book's list of checked-out patrons
     const indexToBookISBN = this.checkBooks[req.isbn].indexOf(req.patronId);
 
     this.patronBooks[req.patronId].splice(indexToBook, 1);
 
+     // If the patron is found in the book's list of checked-out patrons remove the patron from the book's list of checked-out patrons
     if (indexToBookISBN !== -1) {
       this.checkBooks[req.isbn].splice(indexToBookISBN, 1);
     }

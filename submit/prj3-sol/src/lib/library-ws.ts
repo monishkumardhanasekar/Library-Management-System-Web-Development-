@@ -60,7 +60,8 @@ function setupRoutes(app: Express.Application) {
   app.get(`${base}/books`, findBooks(app));
   app.get(`${base}/books/:isbn`, getBookByISBN(app));
   app.delete(`${base}`, clearHandler(app));
-  
+  app.delete(`${base}/lendings`, returnBookHandler(app));  
+
 
   //must be last
   app.use(do404(app));  //custom handler for page not found
@@ -112,7 +113,7 @@ function clearHandler(app: Express.Application) {
 
       // Check if the clear operation was successful
       if (!clearResult.isOk) {
-        
+
         throw clearResult;
       }
 
@@ -137,6 +138,35 @@ function clearHandler(app: Express.Application) {
       res.status(mapped.status).json(mapped);
     }
   };
+}
+
+function returnBookHandler(app: Express.Application) {
+  return async function (req: Express.Request, res: Express.Response) {
+    try {
+      const { patronId, isbn } = req.body;
+      
+      // Validate input
+      if (!patronId || !isbn) {
+        res.status(STATUS.BAD_REQUEST).json({ isOk: false, errors: ["Missing required parameters"] });
+        return;
+      }
+
+      // Perform the return book operation
+      const returnResult = await app.locals.model.returnBook(patronId, isbn);
+      
+      // Check if the return operation was successful
+      if (!returnResult.isOk) {
+        res.status(STATUS.BAD_REQUEST).json({ isOk: false, errors: ["Failed to return the book"] });
+        return;
+      }
+
+      // Return success response
+      res.status(STATUS.OK).json({ isOk: true });
+    } catch (err) {
+      console.error("Error returning book:", err);
+      res.status(STATUS.INTERNAL_SERVER_ERROR).json({ isOk: false, errors: ["Internal server error"] });
+    }
+  }
 }
 
 
@@ -200,6 +230,7 @@ function getBookByISBN(app: Express.Application) {
 
 
 
+
 /** log request on stdout */
 function doTrace(app: Express.Application) {
   return (async function(req: Express.Request, res: Express.Response, 
@@ -241,6 +272,7 @@ function doErrors(app: Express.Application) {
     if (status === STATUS.INTERNAL_SERVER_ERROR) console.error(result.errors);
   };
 }
+
 
 
 

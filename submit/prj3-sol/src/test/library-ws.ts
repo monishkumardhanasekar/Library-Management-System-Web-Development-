@@ -209,10 +209,28 @@ describe('lending library web services', () => {
     });
 
     it('must retrieve an added book from its Location header', async () => {
+      // Add a book using the "Add Book" web service
+      const addBookRes = await ws.put(`${BASE}/books`)
+        .set('Content-Type', 'application/json')
+        .send(BOOKS[0]); // Assuming BOOKS is an array of books
       
+      // Assert that the book was added successfully
+      expect(addBookRes.status).to.equal(STATUS.CREATED);
+      expect(addBookRes.body?.isOk).to.equal(true);
     
-  });
-   
+      // Retrieve the location of the added book from the response headers
+      const bookLocation = addBookRes.headers.location;
+      expect(bookLocation).to.be.a('string');
+    
+      // Send a GET request to the retrieved location
+      const getBookRes = await ws.get(bookLocation);
+    
+      // Assert that the GET request returns the added book
+      expect(getBookRes.status).to.equal(STATUS.OK);
+      expect(getBookRes.body?.isOk).to.equal(true);
+      // Add more assertions as needed to validate the book returned
+    });
+    
 });
 
   

@@ -56,7 +56,7 @@ function setupRoutes(app: Express.Application) {
   //set up application routes
   //TODO: set up application routes
   app.put(`${base}/books`, addBookHandler(app));
-  app.put(`${base}/lendings`, doCheckoutBook(app));
+  app.put(`${base}/lendings`, checkoutBookHandler(app));
   app.get(`${base}/books`, findBooks(app));
   app.get(`${base}/books/:isbn`, getBookByISBN(app));
   app.delete(`${base}`, clearHandler(app));
@@ -72,14 +72,23 @@ function setupRoutes(app: Express.Application) {
 function addBookHandler(app: Express.Application) {
   return (async function(req: Express.Request, res: Express.Response) {
     try {
+      // Extract book details from the request body
       const bookDetails = req.body; 
-      const addBookResult = await app.locals.model.addBook(bookDetails);
-      if (!addBookResult.isOk) 
-      throw addBookResult;
 
-      res.location(`${req.originalUrl}/${addBookResult.val.isbn}`);
-      const response = selfResult(req, addBookResult.val, STATUS.CREATED);
-      res.status(STATUS.CREATED).json(response);
+      // Add the book to the library using the model's addBook function
+      const addBookResult = await app.locals.model.addBook(bookDetails);
+      
+      // Check if the result of adding the book is successful
+      if (!addBookResult.isOk) {
+        throw addBookResult;
+      } else {
+        // If successful, set the location header with the URL of the newly added book
+        res.location(`${req.originalUrl}/${addBookResult.val.isbn}`);
+        const response = selfResult(req, addBookResult.val, STATUS.CREATED);
+        
+        // Respond with the CREATED status and the JSON response
+        res.status(STATUS.CREATED).json(response);
+      }
     } catch (err) {
       const mapped = mapResultErrors(err);
       res.status(mapped.status).json(mapped);
@@ -87,23 +96,56 @@ function addBookHandler(app: Express.Application) {
   });
 }
 
-function doCheckoutBook(app: Express.Application){
-  return (async function(req: Express.Request, res: Express.Response) {
-    try {
-      const { isbn, patronId } = req.body;
-      const checkoutResult = await app.locals.model.checkoutBook(isbn, patronId);
-      if (!checkoutResult.isOk) {
+
+function checkoutBookHandler(app: Express.Application){
+  return (async function(req: Express.Request, res: Express.Response) 
+  {
+    try 
+    {
+      const checkoutResult = await app.locals.model.checkoutBook(req.body);
+      if (!checkoutResult.isOk) 
+      {
         throw checkoutResult;
-      } else {
-        res.location(`${req.originalUrl}/${isbn}`);
-        res.status(STATUS.CREATED).json(checkoutResult);
-      }
-    } catch (error) {
+      } 
+      res.location(selfHref(req, req.body.isbn));
+      const response = selfResult(req, checkoutResult.val, STATUS.OK);
+      res.status(STATUS.OK).json(checkoutResult);
+    } 
+    catch (error) 
+    {
       const mapped = mapResultErrors(error);
       res.status(mapped.status).json(mapped);
     }
   });
 }
+
+function returnBookHandler(app: Express.Application) {
+  return async function (req: Express.Request, res: Express.Response) {
+    try {
+      const { patronId, isbn } = req.body;
+      
+      // Validate input
+      if (!patronId || !isbn) {
+        res.status(STATUS.BAD_REQUEST).json({ isOk: false, errors: ["Missing required parameters"] });
+        return;
+      }
+
+      // Perform the return book operation
+      const result = await app.locals.model.returnBook({ ...req.body, isbn, patronId });
+      if (!result.isOk) throw result;
+      const response = selfResult<LendingLibrary>(req, result.val);
+      res.json(response);
+      
+
+      // // Return success response
+    
+    }  catch (err) {
+      const mapped = mapResultErrors(err);
+      res.status(mapped.status).json(mapped);
+    }
+  }
+}
+
 
 function clearHandler(app: Express.Application) {
   return async function(req: Express.Request, res: Express.Response) {
@@ -138,35 +180,6 @@ function clearHandler(app: Express.Application) {
       res.status(mapped.status).json(mapped);
     }
   };
-}
-
-function returnBookHandler(app: Express.Application) {
-  return async function (req: Express.Request, res: Express.Response) {
-    try {
-      const { patronId, isbn } = req.body;
-      
-      // Validate input
-      if (!patronId || !isbn) {
-        res.status(STATUS.BAD_REQUEST).json({ isOk: false, errors: ["Missing required parameters"] });
-        return;
-      }
-
-      // Perform the return book operation
-      const returnResult = await app.locals.model.returnBook(patronId, isbn);
-      
-      // Check if the return operation was successful
-      if (!returnResult.isOk) {
-        res.status(STATUS.BAD_REQUEST).json({ isOk: false, errors: ["Failed to return the book"] });
-        return;
-      }
-
-      // Return success response
-      res.status(STATUS.OK).json({ isOk: true });
-    } catch (err) {
-      console.error("Error returning book:", err);
-      res.status(STATUS.INTERNAL_SERVER_ERROR).json({ isOk: false, errors: ["Internal server error"] });
-    }
-  }
 }
 
 

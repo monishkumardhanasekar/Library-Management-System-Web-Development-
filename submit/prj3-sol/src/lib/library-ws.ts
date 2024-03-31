@@ -96,28 +96,35 @@ function addBookHandler(app: Express.Application) {
   });
 }
 
-
-function checkoutBookHandler(app: Express.Application){
-  return (async function(req: Express.Request, res: Express.Response) 
-  {
-    try 
-    {
+function checkoutBookHandler(app: Express.Application) {
+  return async function (req: Express.Request, res: Express.Response) {
+    try {
+      // Call the checkoutBook service provided by app.locals.model
       const checkoutResult = await app.locals.model.checkoutBook(req.body);
-      if (!checkoutResult.isOk) 
-      {
+
+      // Check if checkout was successful
+      if (!checkoutResult.isOk) {
+        // If not successful, throw the error to be caught by the catch block
         throw checkoutResult;
-      } 
+      }
+
+      // Set the Location header to the URL of the checked out book
       res.location(selfHref(req, req.body.isbn));
+
+      // Build the response envelope using selfResult utility function
       const response = selfResult(req, checkoutResult.val, STATUS.OK);
-      res.status(STATUS.OK).json(checkoutResult);
-    } 
-    catch (error) 
-    {
+
+      // Send the response with status code 200 (OK)
+      res.status(STATUS.OK).json(response);
+    } catch (error) {
+      // Catch any errors that occur during checkout and handle them
       const mapped = mapResultErrors(error);
+      // Send an error response with appropriate status code and error message
       res.status(mapped.status).json(mapped);
     }
-  });
+  };
 }
+
 
 function returnBookHandler(app: Express.Application) {
   return async function (req: Express.Request, res: Express.Response) {
@@ -186,19 +193,20 @@ function clearHandler(app: Express.Application) {
 function findBooks(app: Express.Application) {
   return async function(req: RequestWithQuery, res: Express.Response) {
     try {
+      // Extract the search query from the request query parameters
       const { search } = req.query;
       if (!search || typeof search !== 'string' || search.trim().length === 0) {
         throw new Errors.Err('Search string is missing or empty', { code: 'BAD_REQ' });
       }
 
+      // Extract index and count parameters from the request query, with default values if not provided
       const index = Number(req.query.index ?? DEFAULT_INDEX);
       const count = Number(req.query.count ?? DEFAULT_COUNT);
 
-      // By requesting one extra result, we ensure that we generate the
-      // next link only if there are more than count remaining results
       const q = { search, index, count: count + 1 };
       
       const result = await app.locals.model.findBooks(q);
+       // Check if the result of findBooks is successful
       if (!result.isOk) throw result;
       
       const response = pagedResult<Book>(req, 'isbn', result.val);

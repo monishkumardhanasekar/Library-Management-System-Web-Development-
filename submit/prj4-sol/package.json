@@ -24,6 +24,8 @@
   },
   "dependencies": {
     "cs544-js-utils": "https://sunybing:sunybing@zdu.binghamton.edu/cs544/lib/cs544-js-utils-0.0.1.tgz",
+    "cs544-node-utils": "https://sunybing:sunybing@zdu.binghamton.edu/cs544/lib/cs544-node-utils-0.0.1.tgz",
+    "lending-library": "https://sunybing:sunybing@zdu.binghamton.edu/cs544/lib/lending-library-0.1.1.tgz",
     "library-types": "https://sunybing:sunybing@zdu.binghamton.edu/cs544/lib/library-types-0.0.1.tgz"
   }
 }

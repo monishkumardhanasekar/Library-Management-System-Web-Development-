@@ -26,7 +26,7 @@ export class LibraryWs {
   async getBookByUrl(bookUrl: URL|string)
     : Promise<Errors.Result<SuccessEnvelope<Lib.XBook>>>
   {
-    return Errors.errResult('TODO');
+    return await getEnvelope<Lib.XBook, SuccessEnvelope<Lib.XBook>>(bookUrl);
   }
 
   /** given an absolute url findUrl ending with /books with query
@@ -36,26 +36,38 @@ export class LibraryWs {
   async findBooksByUrl(findUrl: URL|string)
     : Promise<Errors.Result<PagedEnvelope<Lib.XBook>>>
   {
-    return Errors.errResult('TODO');
+    return await getEnvelope<Lib.XBook, PagedEnvelope<Lib.XBook>>(findUrl);
   }
 
   /** check out book specified by lend */
   //make a PUT request to /lendings
   async checkoutBook(lend: Lib.Lend) : Promise<Errors.Result<void>> {
-    return Errors.errResult('TODO');
+    const url = new URL(`${this.url}/api/lendings`);
+    return await doFetchWithBody<void>(url, 'PUT', lend);
   }
 
   /** return book specified by lend */
   //make a DELETE request to /lendings
   async returnBook(lend: Lib.Lend) : Promise<Errors.Result<void>> {
-    return Errors.errResult('TODO');
+    const url = new URL(`${this.url}/api/lendings`);
+    return await doFetchWithBody<void>(url, 'DELETE', lend);
   }
 
   /** return Lend[] of all lendings for isbn. */
   //make a GET request to /lendings with query-params set
   //to { findBy: 'isbn', isbn }.
   async getLends(isbn: string) : Promise<Errors.Result<Lib.Lend[]>> {
-    return Errors.errResult('TODO');
+    const url =
+      Utils.makeQueryUrl(`${this.url}/api/lendings`, { findBy: 'isbn', isbn });
+    const result =
+      await getEnvelope<Lib.Lend[], SuccessEnvelope<Lib.Lend[]>>(url);
+    if (result.isOk === false) {
+      return result as Errors.Result<Lib.Lend[]>;
+    }
+    else {
+      return Errors.okResult(result.val.result);
+    }
+    
   }
 
 
@@ -103,4 +115,27 @@ async function
   }
 }
 
-//TODO: add other functions as needed
+async function doFetchWithBody<T>(url: URL, method: string,
+				  data: Record<string, string>) 
+  : Promise<Errors.Result<T>>
+{
+  const options: Record<string, any> = {
+    method,
+    headers: { 'Content-Type': 'application/json'  },
+    body: JSON.stringify(data),
+  };
+  try {
+    const res = await fetch(url, options);
+    const envelope = await res.json() as NonPagedResult<T>;
+    if (envelope.isOk === true) {
+      return Errors.okResult(envelope.result);
+    }
+    else {
+      return new Errors.ErrResult(envelope.errors as Errors.Err[]);
+    }
+  }
+  catch (err) {
+    return Errors.errResult(err) as Errors.Result<T>;
+  }
+
+}

@@ -28,6 +28,9 @@ export function App(props: AppProps) {
   const [links, setLinks] = useState<NavLinks>({
     self: { rel: 'self', href: '', method: '' },
   });
+
+  const [patronId, setPatronId] = useState('');
+  
   
   const ws = makeLibraryWs(wsUrl);
   
@@ -56,13 +59,30 @@ export function App(props: AppProps) {
 
   const handleSearchBlur = async () => {
     setErrors([]); // Clear previous errors
+    setBooks([]); // Clear previous search results
+    setSelectedBook(null); // Clear selected book details
+
+    // Check if the search query is empty
+    if (search.trim() === '') {
+      setBooks([]); 
+      setErrors(['Search string must specify words having two or more characters']); // Display warning message
+      setSelectedBook(null);
+      return; // Exit the function
+    }
+  
     const url = makeQueryUrl(`${wsUrl}/api/books`, { search });
     await searchBooks(url);
   };
+  
+  
 
   const handleDetailsClick = (book: Lib.XBook) => {
+    setBooks([]); // Clear search results
     setSelectedBook(book); // Set the selected book to display its details
   };
+
+  
+  
 
   const displayScroll = (links: NavLinks) => {
     const scroll = (
@@ -108,21 +128,23 @@ export function App(props: AppProps) {
       </form>
   
       <div id="result">
-        {displayScroll(links)}
+        {books.length > 0 && displayScroll(links)}
+        {books.length > 0 && (
         <ul id="search-results">
-          {books.map((book, index) => (
-            <li key={index}>
-              <span className="content">{book.result.title}</span>
-              <a className="details" onClick={() => handleDetailsClick(book.result)}>details...</a>
-            </li>
-          ))}
-        </ul>
-        {displayScroll(links)}
+        {books.map((book, index) => (
+        <li key={index}>
+          <span className="content">{book.result.title}</span>
+          <a className="details" onClick={() => handleDetailsClick(book.result)}>details...</a>
+        </li>
+      ))}
+    </ul>
+  )}
+  {books.length > 0 && displayScroll(links)}
+  
   
         {/* Display selected book details */}
         {selectedBook && (
           <div>
-            <h2>Selected Book Details</h2>
             <dl className="book-details">
               <dt>ISBN</dt>
               <dd>{selectedBook.isbn}</dd>
@@ -145,3 +167,4 @@ export function App(props: AppProps) {
     </>
   );  
 }
+

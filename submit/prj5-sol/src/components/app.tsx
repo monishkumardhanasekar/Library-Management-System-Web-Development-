@@ -21,6 +21,7 @@ export function App(props: AppProps) {
   const { wsUrl } = props;
 
   //TODO
+  // State variables to manage search, books, errors, selected book, and links
   const [search, setSearch] = useState('');
   const [books, setBooks] = useState<LinkedResult<Lib.XBook>[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
@@ -34,6 +35,7 @@ export function App(props: AppProps) {
   
   const ws = makeLibraryWs(wsUrl);
   
+  // Function to search books
   const searchBooks = async (url: URL | string) => {
     try {
       const result = await ws.findBooksByUrl(url);
@@ -53,10 +55,12 @@ export function App(props: AppProps) {
     }
   };
 
+  // Function to display errors
   const displayErrors = (errors: { message: string }[]) => {
     setErrors(errors.map(err => err.message));
   };
 
+  // Function to handle search blur event
   const handleSearchBlur = async () => {
     setErrors([]); // Clear previous errors
     setBooks([]); // Clear previous search results
@@ -75,12 +79,14 @@ export function App(props: AppProps) {
   };
   
   
-
+// Function to handle details click event
   const handleDetailsClick = (book: Lib.XBook) => {
     setBooks([]); // Clear search results
     setSelectedBook(book); // Set the selected book to display its details
   };
 
+
+   // Function to display navigation links
   const displayScroll = (links: NavLinks) => {
     const scroll = (
       <div className="scroll">
@@ -91,11 +97,14 @@ export function App(props: AppProps) {
     return scroll;
   };
 
+  // Function to handle scroll event
   const handleScroll = async (url: string) => {
     setErrors([]);
     await searchBooks(url);
   };
 
+
+   // Function to handle checkout form submission
   const handleCheckoutSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const patronIdInput = document.getElementById('patronId') as HTMLInputElement;
@@ -119,6 +128,8 @@ export function App(props: AppProps) {
     }
   }, [selectedBook]);
 
+
+  // Function to update borrowers
   const updateBorrowers = async (isbn: string) => {
     const lendsResult = await ws.getLends(isbn);
     const lends = unwrap(lendsResult);
@@ -151,6 +162,8 @@ export function App(props: AppProps) {
     }
   };
 
+
+  // Function to return a book
   const returnBook = async (isbn: string, patronId: string) => {
     const result = await ws.returnBook({ patronId, isbn });
     if (result.isOk === false) {
@@ -160,6 +173,8 @@ export function App(props: AppProps) {
     }
   };
 
+
+  // Function to unwrap errors
   const unwrap = <T extends unknown>(result: Errors.Result<T>) => {
     if (result.isOk === false) {
       displayErrors(result.errors);

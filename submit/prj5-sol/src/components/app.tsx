@@ -29,7 +29,7 @@ export function App(props: AppProps) {
     self: { rel: 'self', href: '', method: '' },
   });
 
-  const [patronId, setPatronId] = useState('');
+
   
   
   const ws = makeLibraryWs(wsUrl);
@@ -81,9 +81,6 @@ export function App(props: AppProps) {
     setSelectedBook(book); // Set the selected book to display its details
   };
 
-  
-  
-
   const displayScroll = (links: NavLinks) => {
     const scroll = (
       <div className="scroll">
@@ -99,10 +96,77 @@ export function App(props: AppProps) {
     await searchBooks(url);
   };
 
+  const handleCheckoutSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const patronIdInput = document.getElementById('patronId') as HTMLInputElement;
+    const patronId = patronIdInput.value;
+    const lend: Lib.Lend = {
+      patronId,
+      isbn: selectedBook?.isbn || ''
+    };
 
+    const result = await ws.checkoutBook(lend);
+    if (result.isOk === false) {
+      displayErrors(result.errors);
+    } else {
+      await updateBorrowers(selectedBook?.isbn || '');
+    }
+  };
 
+  useEffect(() => {
+    if (selectedBook) {
+      updateBorrowers(selectedBook.isbn);
+    }
+  }, [selectedBook]);
 
+  const updateBorrowers = async (isbn: string) => {
+    const lendsResult = await ws.getLends(isbn);
+    const lends = unwrap(lendsResult);
+    if (lends) {
+      const borrowers = document.getElementById('borrowers');
+      if (borrowers) {
+        borrowers.innerHTML = '';
+        if (lends.length === 0) {
+          borrowers.append('None');
+        } else {
+          const ul = document.createElement('ul');
+          lends.forEach(lend => {
+            const patronId = lend.patronId;
+            const button = document.createElement('button');
+            button.textContent = 'Return Book';
+            button.className = 'return-book';
+            button.addEventListener('click', async () => {
+              await returnBook(isbn, patronId);
+            });
+            const patronElement = document.createElement('span');
+            patronElement.className = 'content';
+            patronElement.textContent = patronId;
+            const li = document.createElement('li');
+            li.append(patronElement, button);
+            ul.append(li);
+          });
+          borrowers.append(ul);
+        }
+      }
+    }
+  };
 
+  const returnBook = async (isbn: string, patronId: string) => {
+    const result = await ws.returnBook({ patronId, isbn });
+    if (result.isOk === false) {
+      displayErrors(result.errors);
+    } else {
+      await updateBorrowers(isbn);
+    }
+  };
+
+  const unwrap = <T extends unknown>(result: Errors.Result<T>) => {
+    if (result.isOk === false) {
+      displayErrors(result.errors);
+    } else {
+      return result.val;
+    }
+  };
 
   return (
     <>
@@ -161,6 +225,15 @@ export function App(props: AppProps) {
               <dt>Borrowers</dt>
               <dd id="borrowers">None</dd>
             </dl>
+            <form className="grid-form" onSubmit={handleCheckoutSubmit}>
+              <label htmlFor="patronId">Patron ID</label>
+              <span>
+                <input id="patronId" type="text" />
+                <br />
+                <span className="error" id="patronId-error"></span>
+              </span>
+              <button type="submit">Checkout Book</button>
+            </form>
           </div>
         )}
       </div>

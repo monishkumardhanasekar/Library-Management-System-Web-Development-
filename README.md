@@ -10,12 +10,6 @@
     <li><b>Search Functionality:</b> Efficiently search for books and users within the system.</li>
 </ul>
 
-<h2>Technologies Used</h2>
-<ul>
-    <li><b>Frontend:</b> HTML, CSS, JavaScript</li>
-    <li><b>Backend:</b> PHP</li>
-    <li><b>Database:</b> MySQL</li>
-</ul>
 
 <h2>Installation</h2>
 <ol>
